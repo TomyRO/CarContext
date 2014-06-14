@@ -15,6 +15,12 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
@@ -28,9 +34,13 @@ public class CarContextService extends Service {
 
   private BeaconManager beaconManager;
   private NotificationManager notificationManager;
+  private LocationManager locationManager;
   private Region region;
 
+  private String locationProvider;
+  
   private Utils.Proximity lastProximity = Utils.Proximity.UNKNOWN;
+  private Location lastLocation = null;
   
 	public CarContextService() {
 		//super("CarContextService");
@@ -40,7 +50,7 @@ public class CarContextService extends Service {
   @Override
   public void onCreate() {
     notificationManager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-
+    locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
       // Display a notification about us starting.  We put an icon in the status bar.
     postNotification("Car context service started");
   }
@@ -49,6 +59,7 @@ public class CarContextService extends Service {
   
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
+	  
     Log.i("LocalService", "Received start id " + startId + ": " + intent);
     region = new Region("myCarRegion", null, 1977, null);
     beaconManager = new BeaconManager(this);
@@ -69,7 +80,17 @@ public class CarContextService extends Service {
           } else if (currentProximity == Utils.Proximity.NEAR) {
             postNotification("My car is nearby");
           } else {
-            postNotification("Dude, you lost your car!");
+            if (lastLocation != null) {
+              SharedPreferences settings = getSharedPreferences("CarContext", 0);
+              SharedPreferences.Editor editor = settings.edit();
+                editor.putString("latitude", "" + lastLocation.getLatitude());
+                editor.putString("longitude", "" + lastLocation.getLongitude());
+                postNotification("location Saved");
+                // Commit the edits!
+                editor.commit();
+            } else {
+               postNotification("Dude, you lost your car, we had no location!");
+            }
           }
         }
         lastProximity = currentProximity;
@@ -85,6 +106,24 @@ public class CarContextService extends Service {
         }
       }
     });    
+
+    locationProvider = locationManager.getBestProvider(new Criteria(), true);
+    locationManager.requestLocationUpdates(locationProvider, 10000, 1,
+        new LocationListener() {
+          @Override
+          public  void onLocationChanged(Location location) {
+            lastLocation = location;
+            postNotification("new location :" + location.toString());
+          }
+          @Override
+          public void onProviderDisabled(String provider) {}
+          @Override
+          public void onProviderEnabled(String provider) {}
+          @Override
+          public void onStatusChanged(String provider, int status, Bundle extras) {}
+        });
+    
+    
     postNotification("onStartCommand");
 /*    beaconManager.setBackgroundScanPeriod(TimeUnit.SECONDS.toMillis(1), 0);
     
