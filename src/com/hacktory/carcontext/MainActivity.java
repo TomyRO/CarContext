@@ -1,15 +1,22 @@
 package com.hacktory.carcontext;
-import android.R;
 import android.app.Activity;
-import android.app.Notification;
-import android.app.NotificationManager;
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements OnClickListener{
+	private Button startButton; 
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		//startButton = (Button) findViewById(R.id.start_service_button);
+		//Log.d("Activity", startButton.toString());
+		Intent intent = new Intent(this, CarContextService.class);
+		startService(intent);
 	}
 
 	@Override
@@ -40,6 +47,13 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onSaveInstanceState(Bundle outState) {
 		super.onSaveInstanceState(outState);
+	}
+
+	@Override
+	public void onClick(View arg0) {
+		Intent intent = new Intent(this, CarContextService.class);
+		startService(intent);
+		
 	}
 
 
