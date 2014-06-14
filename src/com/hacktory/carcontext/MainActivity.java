@@ -53,8 +53,6 @@ public class MainActivity extends Activity implements OnClickListener{
 	public void onClick(View arg0) {
 		Intent intent = new Intent(this, CarContextService.class);
 		startService(intent);
-		
 	}
-
 
 } 
