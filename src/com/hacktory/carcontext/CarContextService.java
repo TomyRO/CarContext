@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 import com.estimote.sdk.Beacon;
 import com.estimote.sdk.BeaconManager;
 import com.estimote.sdk.Region;
+import com.estimote.sdk.Utils;
 
 import android.app.IntentService;
 import android.app.Notification;
@@ -29,6 +30,7 @@ public class CarContextService extends Service {
   private NotificationManager notificationManager;
   private Region region;
 
+  private Utils.Proximity lastProximity = Utils.Proximity.UNKNOWN;
   
 	public CarContextService() {
 		//super("CarContextService");
@@ -48,7 +50,7 @@ public class CarContextService extends Service {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
     Log.i("LocalService", "Received start id " + startId + ": " + intent);
-    region = new Region("myCarRegion", null, null, null);
+    region = new Region("myCarRegion", null, 1977, null);
     beaconManager = new BeaconManager(this);
     beaconManager.setRangingListener(new BeaconManager.RangingListener() {
       @Override
@@ -56,10 +58,23 @@ public class CarContextService extends Service {
         // Note that results are not delivered on UI thread.
             // Note that beacons reported here are already sorted by estimated
             // distance between device and beacon.
-            postNotification("Entered region with beacons" + beacons.size());
-      }
-
-    });    
+        Utils.Proximity currentProximity = Utils.Proximity.UNKNOWN;
+        if (beacons.size() > 0) {
+          Beacon myBeacon = beacons.get(0);
+          currentProximity = Utils.computeProximity(myBeacon);
+        } 
+        if (currentProximity != lastProximity) {
+          if (currentProximity == Utils.Proximity.IMMEDIATE) {
+            postNotification("My car is in immediate proximity");
+          } else if (currentProximity == Utils.Proximity.NEAR) {
+            postNotification("My car is nearby");
+          } else {
+            postNotification("Dude, you lost your car!");
+          }
+        }
+        lastProximity = currentProximity;
+      }  // onBeaconsDiscovered
+    });  // setRangingListener
     
     beaconManager.connect(new BeaconManager.ServiceReadyCallback() {
       @Override public void onServiceReady() {
